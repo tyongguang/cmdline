@@ -36,8 +36,9 @@
 #include <typeinfo>
 #include <cstring>
 #include <algorithm>
+#ifdef __linux__
 #include <cxxabi.h>
-#include <cstdlib>
+#endif
 
 namespace cmdline{
 
@@ -51,7 +52,6 @@ public:
     std::stringstream ss;
     if (!(ss<<arg && ss>>ret && ss.eof()))
       throw std::bad_cast();
-    
     return ret;
   }
 };
@@ -102,6 +102,7 @@ Target lexical_cast(const Source &arg)
   return lexical_cast_t<Target, Source, detail::is_same<Target, Source>::value>::cast(arg);
 }
 
+#ifdef __linux__
 static inline std::string demangle(const std::string &name)
 {
   int status=0;
@@ -110,11 +111,16 @@ static inline std::string demangle(const std::string &name)
   free(p);
   return ret;
 }
+#endif
 
 template <class T>
 std::string readable_typename()
 {
+#ifdef __linux__
   return demangle(typeid(T).name());
+#else
+  return typeid(T).name();
+#endif
 }
 
 template <class T>
