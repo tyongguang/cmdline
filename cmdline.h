@@ -153,6 +153,7 @@ struct default_reader{
   T operator()(const std::string &str){
     return detail::lexical_cast<T>(str);
   }
+  std::string desc(){return "";}
 };
 
 template <class T>
@@ -162,6 +163,11 @@ struct range_reader{
     T ret=default_reader<T>()(s);
     if (!(ret>=low && ret<=high)) throw cmdline::cmdline_error("range_error");
     return ret;
+  }
+  std::string desc(){
+      std::stringstream ss;
+      ss <<" range: [" << low <<" , " << high << "]";
+      return ss.str();
   }
 private:
   T low, high;
@@ -182,6 +188,14 @@ struct oneof_reader{
     return ret;
   }
   void add(const T &v){ alt.push_back(v); }
+  std::string desc(){
+      std::stringstream ss;
+      ss << " One of following value: [";
+      std::ostream_iterator<T> output_iter(ss, ",");
+      std::copy(alt.begin(), alt.end(), output_iter);
+      ss << "]";
+      return ss.str();
+  }
 private:
   std::vector<T> alt;
 };
@@ -309,6 +323,15 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8, T a9, T a1
   ret.add(a9);
   ret.add(a10);
   return ret;
+}
+template <class T>
+oneof_reader<T> oneofmany(const T * pBegin, int count)
+{
+    oneof_reader<T> ret;
+    for(int i = 0; i < count; ++ i) {
+        ret.add(pBegin[i]);
+    }
+    return ret;
 }
 
 //-----
@@ -559,6 +582,25 @@ public:
     return oss.str();
   }
 
+  int GetOptAsInt(const char * opt) {
+      return get<int>(opt);
+  }
+
+  double GetOptAsDouble(const char * opt) {
+      return get<double>(opt);
+  }
+
+  unsigned long long GetOptAsULong64(const char * opt) {
+      return get<unsigned long long>(opt);
+  }
+
+  std::string GetOptAsString(const char * opt) {
+      return get<std::string>(opt);
+  }
+      
+  void addmoremsg(const char * msg) {
+      more_msgs.push_back(msg);
+  }
   std::string usage() const {
     std::ostringstream oss;
     oss<<"usage: "<<prog_name<<" ";
@@ -586,6 +628,17 @@ public:
       for (size_t j=ordered[i]->name().length(); j<max_width+4; j++)
         oss<<' ';
       oss<<ordered[i]->description()<<std::endl;
+    }
+    if (more_msgs.size() != 0) {
+        
+        oss << "--------------------------" << std::endl;
+        oss << "More message:" << std::endl;
+        for(std::vector<std::string>::const_iterator iter = more_msgs.begin(); 
+            iter != more_msgs.end(); ++ iter) {
+                oss << *iter << std::endl;
+                oss << std::endl;
+        }
+        oss << "--------------------------" << std::endl;
     }
     return oss.str();
   }
@@ -792,6 +845,7 @@ private:
                                   const std::string &desc,
                                   F reader)
       : option_with_value<T>(name, short_name, need, def, desc), reader(reader){
+          this->desc = this->desc + reader.desc();
     }
 
   private:
@@ -810,6 +864,7 @@ private:
   std::vector<std::string> others;
 
   std::vector<std::string> errors;
+  std::vector<std::string> more_msgs;
 };
 
 } // cmdline
