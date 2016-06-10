@@ -41,7 +41,10 @@
 #endif
 
 namespace cmdline{
-
+    enum usage_display {
+        usage_oneline = 0,
+        usage_newline
+    };
 namespace detail{
 
 template <typename Target, typename Source, bool Same>
@@ -338,7 +341,7 @@ oneof_reader<T> oneofmany(const T * pBegin, int count)
 
 class parser{
 public:
-  parser(){
+  parser(): usage_display_mode_(cmdline::usage_oneline){
   }
   ~parser(){
     for (std::map<std::string, option_base*>::iterator p=options.begin();
@@ -597,7 +600,10 @@ public:
   std::string GetOptAsString(const char * opt) {
       return get<std::string>(opt);
   }
-      
+    
+  void set_usage_display_mode(usage_display mode) {
+      usage_display_mode_ = mode;
+  }
   void addmoremsg(const char * msg) {
       more_msgs.push_back(msg);
   }
@@ -627,7 +633,14 @@ public:
       oss<<"--"<<ordered[i]->name();
       for (size_t j=ordered[i]->name().length(); j<max_width+4; j++)
         oss<<' ';
+
+      if (usage_display_mode_ == usage_newline)
+          oss << std::endl;
+
       oss<<ordered[i]->description()<<std::endl;
+
+      if (usage_display_mode_ == usage_newline)
+          oss << std::endl;
     }
     if (more_msgs.size() != 0) {
         
@@ -865,6 +878,7 @@ private:
 
   std::vector<std::string> errors;
   std::vector<std::string> more_msgs;
+  usage_display usage_display_mode_;
 };
 
 } // cmdline
